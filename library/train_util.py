@@ -1792,7 +1792,7 @@ def replace_unet_modules(unet: diffusers.models.unet_2d_condition.UNet2DConditio
     if mem_eff_attn:
         replace_unet_cross_attn_to_memory_efficient()
     elif xformers:
-        replace_unet_cross_attn_to_xformers()
+        replace_unet_cross_attn_to_xformers(unet)
 
 
 def replace_unet_cross_attn_to_memory_efficient():
@@ -1875,7 +1875,13 @@ def replace_unet_cross_attn_to_xformers():
         out = self.to_out[1](out)
         return out
 
-    diffusers.models.attention.CrossAttention.forward = forward_xformers
+    print("diffusers version:", diffusers.__version__)
+    if diffusers.__version__ >= "0.11.0":
+        # let xformer to decide witch ops is more suitable, reference _dispatch_fwd in xformers.ops
+        unet.enable_xformers_memory_efficient_attention()
+    elif hasattr(diffusers.models.attention, "CrossAttention") and \
+        hasattr(diffusers.models.attention.CrossAttention, "forward"):
+        diffusers.models.attention.CrossAttention.forward = forward_xformers
 
 
 """
